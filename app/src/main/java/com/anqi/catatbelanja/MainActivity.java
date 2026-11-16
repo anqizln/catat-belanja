@@ -6,6 +6,9 @@ import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Color;
+import android.os.Build;
+import android.view.View;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -262,22 +265,56 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void setBars(String statusHex, String navHex, boolean lightBars) {
+            runOnUiThread(() -> {
+                try {
+                    getWindow().setStatusBarColor(Color.parseColor(statusHex));
+                    getWindow().setNavigationBarColor(Color.parseColor(navHex));
+                    View d = getWindow().getDecorView();
+                    int f = d.getSystemUiVisibility();
+                    if (lightBars) {
+                        f |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                        if (Build.VERSION.SDK_INT >= 27) f |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                    } else {
+                        f &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                        if (Build.VERSION.SDK_INT >= 27) f &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                    }
+                    d.setSystemUiVisibility(f);
+                } catch (Exception ignored) {
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void shareFileBase64(String name, String b64, String mime) {
+            try {
+                writeAndShare(name, Base64.decode(b64, Base64.DEFAULT), mime);
+            } catch (Exception e) {
+                toast("Gagal membuat file: " + e.getMessage());
+            }
+        }
+
+        private void writeAndShare(String name, byte[] bytes, String mime) throws Exception {
+            File dir = new File(getCacheDir(), "export");
+            //noinspection ResultOfMethodCallIgnored
+            dir.mkdirs();
+            File f = new File(dir, name);
+            try (FileOutputStream fo = new FileOutputStream(f)) {
+                fo.write(bytes);
+            }
+            Uri u = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".files", f);
+            Intent i = new Intent(Intent.ACTION_SEND);
+            i.setType(mime);
+            i.putExtra(Intent.EXTRA_STREAM, u);
+            i.putExtra(Intent.EXTRA_SUBJECT, name);
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            runOnUiThread(() -> startActivity(Intent.createChooser(i, "Kirim " + name)));
+        }
+
+        @JavascriptInterface
         public void shareFile(String name, String content, String mime) {
             try {
-                File dir = new File(getCacheDir(), "export");
-                //noinspection ResultOfMethodCallIgnored
-                dir.mkdirs();
-                File f = new File(dir, name);
-                try (FileOutputStream fo = new FileOutputStream(f)) {
-                    fo.write(content.getBytes(StandardCharsets.UTF_8));
-                }
-                Uri u = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".files", f);
-                Intent i = new Intent(Intent.ACTION_SEND);
-                i.setType(mime);
-                i.putExtra(Intent.EXTRA_STREAM, u);
-                i.putExtra(Intent.EXTRA_SUBJECT, name);
-                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                runOnUiThread(() -> startActivity(Intent.createChooser(i, "Kirim " + name)));
+                writeAndShare(name, content.getBytes(StandardCharsets.UTF_8), mime);
             } catch (Exception e) {
                 toast("Gagal membuat file: " + e.getMessage());
             }
