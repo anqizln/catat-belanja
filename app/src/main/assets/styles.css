@@ -244,3 +244,4 @@ table.t .r { text-align: right; white-space: nowrap; }
 .help .hnote { background: var(--sunk); border-left: 3px solid var(--jade); padding: 8px 10px; border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { .help summary::after { transition: none; } }
 .help .hb ul.ex li { cursor: pointer; }
+.row > svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
