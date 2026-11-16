@@ -109,7 +109,7 @@ function finishOnboarding() {
   S.settings.onboarded = true; curPeriod = null; saveNow();
   $("#tabs").classList.remove("hidden");
   go("home");
-  toast("Siap. Tekan Catat untuk transaksi pertama.");
+  toast("Siap. Tekan Catat untuk mulai. Panduan ada di tombol ? di Beranda.");
 }
 
 /* transaksi dari versi 1 */

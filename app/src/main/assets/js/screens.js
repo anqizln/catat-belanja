@@ -85,7 +85,7 @@ ROUTES.home = function (scr) {
     return `<div class="row"><span class="dot tr">${ICON.person}</span><span class="main"><span class="t1 d-block">${esc(p)}</span><span class="t2 d-block">${net >= 0 ? "berhutang ke kamu" : "kamu berhutang"}</span></span><span class="amt num ${net >= 0 ? "in" : ""}">${rp(Math.abs(net))}</span></div>`;
   }).join("")}</div>` : "";
 
-  scr.innerHTML = `<div class="topbar"><h1>${S.settings.name ? "Halo, " + esc(S.settings.name) : "Beranda"}</h1></div>
+  scr.innerHTML = `<div class="topbar"><h1>${S.settings.name ? "Halo, " + esc(S.settings.name) : "Beranda"}</h1><button class="xbtn helpbtn" id="homeHelp" aria-label="Bantuan">?</button></div>
   <div class="page">
     <div style="display:flex;justify-content:center;margin-bottom:10px">${pp.html}</div>
     <section class="hero" aria-label="Ringkasan periode">
@@ -102,6 +102,7 @@ ROUTES.home = function (scr) {
     ${ready}${safe}${budgetHtml}${catHtml}${acctHtml}${debtHtml}
   </div>`;
   pp.bind(scr);
+  $("#homeHelp").onclick = openHelp;
   // tooltip pita
   const rb = $("#ribbon");
   const showTip = el => {
@@ -213,7 +214,7 @@ function renderMsgs() {
       return `<div class="msg bot">${esc(c.text)}${c.questions && c.questions.length ? `<ol>${c.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ol>` : ""}</div>`;
     }).join("");
   }
-  if (busy) m.insertAdjacentHTML("beforeend", `<div class="msg bot"><span class="typing"><i></i><i></i><i></i></span></div>`);
+  if (busy) m.insertAdjacentHTML("beforeend", `<div class="msg bot"><span class="typing"><i></i><i></i><i></i></span> <span class="muted num" id="busyT" style="font-size:12px;margin-left:6px"></span></div>`);
   m.scrollTop = m.scrollHeight;
 }
 let draftsOpen = true;
@@ -267,9 +268,10 @@ async function sendChat() {
   if (S.chat.length > 80) S.chat = S.chat.slice(-80);
   inp.value = ""; inp.style.height = "auto"; attach = []; renderAttach();
   busy = true; renderMsgs(); save();
+  const t0 = Date.now(); const tick = setInterval(() => { const e = $("#busyT"); if (e) e.textContent = Math.round((Date.now() - t0) / 1000) + " dtk · " + S.settings.model; }, 1000);
   try { await aiSend(text, imgs); draftsOpen = true; }
   catch (e) { S.chat.push({ role: "err", text: e.message || String(e) }); }
-  busy = false; save(); renderMsgs(); renderDrafts();
+  clearInterval(tick); busy = false; save(); renderMsgs(); renderDrafts();
 }
 
 /* ================= LAPORAN ================= */
@@ -342,6 +344,7 @@ ROUTES.set = function (scr, opts) {
   const outCats = S.cats.filter(c => c.type === "out"), inCats = S.cats.filter(c => c.type === "in");
   const catRow = c => `<button class="row" data-cat="${c.id}"><span class="main"><span class="t1 d-block">${esc(c.name)}${c.salary ? ` <span class="tag good">gaji</span>` : ""}</span><span class="t2 d-block">${esc(c.group || "Tanpa kelompok")}</span></span><span class="amt num">${c.budget ? rpShort(c.budget) : ""}${c.budget ? "<small>budget</small>" : ""}</span></button>`;
   scr.innerHTML = `<div class="topbar"><h1>Atur</h1></div><div class="page">
+    <div class="group" style="margin-top:4px"><button class="row" id="openHelp"><span class="main"><span class="t1 d-block">Bantuan & panduan</span><span class="t2 d-block">Cara pakai, contoh kalimat, backup, data disimpan di mana</span></span>${ICON.right}</button></div>
     <div class="sect"><h2>Tampilan</h2></div>
     <div class="seg" id="theme">${[["system", "Ikut HP"], ["light", "Terang"], ["dark", "Gelap"]].map(([k, l]) => `<button data-t="${k}" class="${st.theme === k ? "on" : ""}">${l}</button>`).join("")}</div>
     <label class="f" style="margin-top:12px"><span>Nama panggilan</span><input class="inp" id="sName" value="${esc(st.name)}" placeholder="Opsional"></label>
@@ -382,10 +385,11 @@ ROUTES.set = function (scr, opts) {
       <button class="row" id="dChat"><span class="main"><span class="t1 d-block">Hapus riwayat chat</span><span class="t2 d-block">Transaksi tidak ikut terhapus</span></span></button>
       <button class="row" id="dReset"><span class="main"><span class="t1 d-block" style="color:var(--bad)">Hapus semua data</span><span class="t2 d-block">Mulai dari awal</span></span></button>
     </div>
-    <p class="muted" style="font-size:12px;text-align:center;margin:22px 0 0">Catat Belanja 2.0 · data tersimpan di HP ini</p>
+    <p class="muted" style="font-size:12px;text-align:center;margin:22px 0 0">Catat Belanja ${APP_VERSION} · data tersimpan di HP ini</p>
   </div>`;
   if (opts.focus === "ai") setTimeout(() => $("#aiSec").scrollIntoView(), 50);
   $$("[data-t]", scr).forEach(b => b.onclick = () => { st.theme = b.dataset.t; save(); applyTheme(); ROUTES.set(scr, {}); });
+  $("#openHelp").onclick = openHelp;
   $("#sName").onchange = e => { st.name = e.target.value.trim(); save(); };
   $("#sDay").onchange = e => { st.cycleDay = +e.target.value; curPeriod = null; save(); toast("Periode diubah"); };
   $("#sSal").onchange = e => {

@@ -36,15 +36,27 @@ async function ensureModel() {
   save();
 }
 
+/* matikan / kecilkan "berpikir" supaya jawaban cepat */
+function thinkingFor(model) {
+  if (/gemini-2\.5-(flash|flash-lite)/.test(model)) return { thinkingBudget: 0 };
+  if (/pro/.test(model)) return null;
+  if (/gemini-(\d+)/.test(model) && +model.match(/gemini-(\d+)/)[1] >= 3) return { thinkingLevel: "minimal" };
+  if (/latest/.test(model)) return { thinkingBudget: 0 };
+  return null;
+}
+const noThink = {};
 async function gemini(body, model) {
   const st = S.settings;
+  const tc = !noThink[model] && thinkingFor(model);
+  const b = tc ? Object.assign({}, body, { generationConfig: Object.assign({}, body.generationConfig || {}, { thinkingConfig: tc }) }) : body;
   let r;
   try {
     r = await fetch(GEMINI + encodeURIComponent(model) + ":generateContent", {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": st.apiKey }, body: JSON.stringify(body)
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": st.apiKey }, body: JSON.stringify(b)
     });
   } catch (e) { const err = new Error("Tidak tersambung ke internet. Cek koneksi lalu kirim ulang."); err.code = "net"; throw err; }
   const j = await r.json().catch(() => ({}));
+  if (!r.ok && tc && r.status === 400 && /think/i.test((j.error && j.error.message) || "")) { noThink[model] = true; return gemini(body, model); }
   if (!r.ok) {
     const msg = (j.error && j.error.message) || "HTTP " + r.status;
     const err = new Error(msg); err.status = r.status; throw err;
@@ -83,7 +95,7 @@ function parseJson(raw) {
 
 function systemPrompt() {
   const st = S.settings, d = new Date();
-  const recent = S.tx.filter(t => t.date >= addDays(today(), -21)).slice(-150)
+  const recent = S.tx.filter(t => t.date >= addDays(today(), -10)).slice(-60)
     .map(t => `${t.date} | ${JENIS_REV[t.kind] || t.kind} | ${t.kind === "out" || t.kind === "in" ? catName(t.cat) : ""} | ${t.amount} | ${acctName(t.acct)} | ${t.note}`).join("\n");
   const cash = S.accts.find(a => a.type === "cash");
   return `Kamu asisten pencatat keuangan pribadi${st.name ? " milik " + st.name : ""}. Ubah input (foto struk, screenshot aplikasi belanja/ojol/mutasi bank/notifikasi kartu kredit, atau chat) menjadi draf transaksi.
@@ -119,7 +131,7 @@ JAWAB HANYA JSON:
 {"reply":"singkat, bahasa Indonesia santai, tanpa emoji","drafts":[{"tanggal":"YYYY-MM-DD","jenis":"keluar","kategori":"...","nominal":12345,"akun":"...","ke_akun":null,"biaya_admin":null,"orang":null,"keterangan":"...","ragu":false}],"questions":["..."]}
 "drafts" = daftar LENGKAP draf terbaru.
 
-TERSIMPAN 3 minggu terakhir (tanggal | jenis | kategori | nominal | akun | keterangan):
+TERSIMPAN 10 hari terakhir (tanggal | jenis | kategori | nominal | akun | keterangan):
 ${recent || "(kosong)"}`;
 }
 
@@ -140,7 +152,7 @@ function draftFromJson(x) {
 
 async function aiSend(text, imgs) {
   const hist = [];
-  for (const c of S.chat.slice(0, -1).filter(c => c.role !== "err").slice(-12)) {
+  for (const c of S.chat.slice(0, -1).filter(c => c.role !== "err").slice(-6)) {
     const role = c.role === "me" ? "user" : "model";
     const t = (c.text || "") + (c.questions && c.questions.length ? "\nPertanyaan: " + c.questions.map((q, i) => (i + 1) + ". " + q).join(" ") : "");
     if (!hist.length && role !== "user") continue;
@@ -177,11 +189,11 @@ function shrinkImage(dataUrl) {
   return new Promise(res => {
     const img = new Image();
     img.onload = () => {
-      const max = 1600; let w = img.width, h = img.height;
+      const max = 1280; let w = img.width, h = img.height;
       if (Math.max(w, h) > max) { const r = max / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r); }
       const c = document.createElement("canvas"); c.width = w; c.height = h;
       const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
-      const out = c.toDataURL("image/jpeg", 0.85);
+      const out = c.toDataURL("image/jpeg", 0.8);
       const t = document.createElement("canvas"); const s = 120 / Math.max(w, h); t.width = Math.round(w * s); t.height = Math.round(h * s);
       t.getContext("2d").drawImage(c, 0, 0, t.width, t.height);
       res({ dataUrl: out, b64: out.split(",")[1], mime: "image/jpeg", thumb: t.toDataURL("image/jpeg", 0.6) });

@@ -1,6 +1,6 @@
 /* cache offline: ambil versi terbaru kalau online, pakai cache kalau offline */
-const CACHE = "catatbelanja-v2";
-const FILES = ["./", "index.html", "styles.css", "manifest.webmanifest", "js/core.js", "js/export.js", "js/ai.js", "js/ui.js", "js/screens.js", "js/onboard.js", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png"];
+const CACHE = "catatbelanja-v4";
+const FILES = ["./", "index.html", "styles.css", "manifest.webmanifest", "js/core.js", "js/export.js", "js/ai.js", "js/ui.js", "js/screens.js", "js/help.js", "js/onboard.js", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {

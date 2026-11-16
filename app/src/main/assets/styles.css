@@ -223,3 +223,24 @@ table.t .r { text-align: right; white-space: nowrap; }
 #toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg);
   padding: 10px 16px; border-radius: 20px; font-size: 13.5px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 40; max-width: 88%; text-align: center; }
 #toast.on { opacity: .96; }
+
+/* bantuan */
+.helpbtn { font-weight: 700; font-size: 16px; color: var(--jade); }
+.help details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; overflow: hidden; }
+.help summary { list-style: none; cursor: pointer; padding: 14px 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; min-height: 52px; }
+.help summary::-webkit-details-marker { display: none; }
+.help summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+.help details[open] summary::after { transform: rotate(-135deg); }
+.help .hb { padding: 0 16px 14px; font-size: 14.5px; line-height: 1.55; }
+.help .hb p { margin: 0 0 8px; }
+.help .hb ol, .help .hb ul { margin: 0 0 8px; padding-left: 20px; }
+.help .hb li { margin-bottom: 4px; }
+.help .hb ul.ex { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.help .hb ul.ex li { background: var(--sunk); border-radius: 14px; padding: 5px 11px; margin: 0; font-size: 13.5px; }
+.help .hb dl { margin: 0; }
+.help .hb dt { font-weight: 600; margin-top: 8px; }
+.help .hb dd { margin: 2px 0 0; color: var(--muted); }
+.help .hb code { background: var(--sunk); border-radius: 6px; padding: 1px 5px; font-size: 13px; }
+.help .hnote { background: var(--sunk); border-left: 3px solid var(--jade); padding: 8px 10px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .help summary::after { transition: none; } }
+.help .hb ul.ex li { cursor: pointer; }
